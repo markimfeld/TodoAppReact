@@ -55,7 +55,7 @@ const TaskForm = (props) => {
 
           const response = await fetch('http://127.0.0.1:5000/api/tasks/', options);
 
-          if(response.ok && response.status === 200) {
+          if(response.ok && response.status === 201) {
             const taskSaved = await response.json();
             console.log(taskSaved);
             onNewTask(taskSaved);

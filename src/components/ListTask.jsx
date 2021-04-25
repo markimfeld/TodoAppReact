@@ -8,6 +8,7 @@ const ListTask = () => {
   const [message, setMessage] = useState('');
   const [variant, setVariant] = useState('success');
   const [tasks, setTasks] = useState([]);
+  const [completedTasks, setCompletedTasks] = useState([]);
   const [categories, setCategories] = useState([]);
   const categoriesById = new Map();
 
@@ -42,6 +43,7 @@ const ListTask = () => {
         const data = await res.json();
 
         setTasks(data);
+        setCompletedTasks(data);
       }
     }
 
@@ -59,14 +61,49 @@ const ListTask = () => {
       <Row key={task.id} className="mb-3">
         <Col>
           <Card body>
-            <Task category={category} task={task} onTaskUpdate={updateTask => 
-              setTasks(currentTasks => currentTasks.filter(task => task.id !== updateTask.id))
-            } />
+            <Task category={category} task={task} onTaskUpdate={updatedTask => {
+                setTasks(currentTasks => currentTasks.filter(task => task.id !== updatedTask.id));
+                setCompletedTasks(currentTasks => [...currentTasks, updatedTask]);
+              }
+            }
+            onTaskDelete={deletedTask => {
+              setTasks(currentTasks => currentTasks.filter(task => task.id !== deletedTask.id));
+              setMessage(`Se eliminó correctamente.`);
+              setVariant('success');
+              setTimeout(() => setMessage(''), 3000);
+            }} />
           </Card>
         </Col>
       </Row>
     );
-  })
+  });
+
+  const finishedTasks = completedTasks.filter(task => task.status);
+
+  const listFinishedTasks = finishedTasks.map(task => {
+    const category = categoriesById.get(task.category_id);
+
+    return (
+      <Row key={task.id} className="mb-3">
+        <Col>
+          <Card body>
+            <Task category={category} task={task} onTaskUpdate={updatedTask => {
+                  setCompletedTasks(currentTasks => currentTasks.filter(task => task.id !== updatedTask.id));
+                  setTasks(currentTasks => [...currentTasks, updatedTask]);
+                }
+              } 
+              onTaskDelete={deletedTask => {
+                setCompletedTasks(currentTasks => currentTasks.filter(task => task.id !== deletedTask.id));
+                setMessage(`Se eliminó correctamente.`);
+                setVariant('success');
+                setTimeout(() => setMessage(''), 3000);
+              }} />
+          </Card>
+        </Col>
+      </Row>
+    );
+  });
+
 
   return (
     <>
@@ -75,10 +112,11 @@ const ListTask = () => {
         <Row>
           <Col className="col-8">
             { listTask }
+            { listFinishedTasks }
             <div className="d-flex justify-content-between">
               <span className="d-flex">
                 <p className="mr-3">{ tasks.filter(task => !task.status ).length } items left</p>
-                <p>{ tasks.filter(task => task.status ).length } items completed</p>
+                <p>{ completedTasks.filter(task => task.status ).length } items completed</p>
               </span>
               <span>
                 <Button 
@@ -93,17 +131,18 @@ const ListTask = () => {
 
                     const response = await fetch('http://localhost:5000/api/tasks/clean-all/', options);
 
-                    if(response.ok) {
+                    if(response.ok && response.status === 200) {
                       const tasksDeleted = await response.json();
+                      
+                      setMessage(`Se eliminaron ${tasksDeleted.length} tareas.`);
+                      setVariant('success');
+                      setTimeout(() => setMessage(''), 3000);
+                      setTasks([]);
 
-                      if(tasksDeleted.length === 0) {
-                        setMessage('No hay tareas para eliminar!');
-                        setVariant('warning');
-                      } else {
-                        setMessage(`Se eliminaron ${tasksDeleted.length} tareas.`);
-                        setVariant('success');
-                        setTasks([]);
-                      }
+                    } else if(response.ok && response.status === 204) {
+                      setMessage('No hay tareas para eliminar!');
+                      setVariant('warning');
+                      setTimeout(() => setMessage(''), 3000);
                     }
 
                   }}
